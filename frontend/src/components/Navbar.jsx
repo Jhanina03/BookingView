@@ -52,8 +52,8 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to='/'>
                 <div className="flex gap-2 items-center">
-                    <img src={assets.homeIcon} alt="logo" className={`h-9 ${isScrolled && "invert opacity-80"}`} />
-                    <h2 className="text-2xl font-bold text-white">Booking View</h2>
+                    <img src={assets.homeIcon} alt="logo" className={`h-9 ${!isScrolled && "invert opacity-80"}`} />
+                    <h2 className={`text-2xl font-bold text-white ${isScrolled && "invert opacity-80"}`} >Booking View</h2>
                 </div>
                     
                 </Link>
