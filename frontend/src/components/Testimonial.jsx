@@ -12,7 +12,7 @@ const Testimonial = () => {
 
       <div className="grid gap-12 text-center md:grid-cols-2 mt-10">
         {testimonials.map((testimonial) => (
-          <div className="mb-6 md:mb-0">
+          <div key={testimonial.id} className="mb-6 md:mb-0">
             <div className="mb-6 flex justify-center">
               <img
                 src={testimonial.image}

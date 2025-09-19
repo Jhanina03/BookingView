@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { assets, facilityIcons, roomsDummyData } from "../assets/assets";
 import { useLocation, useNavigate } from "react-router-dom";
+import NoRooms from "../components/No-rooms";
 
 const CheckBox = ({label, selected = false, onChange = () => {}}) => {
   return(
@@ -113,11 +114,14 @@ const handleSortOptionChange = (label) => {
 
         {/* Rooms list */}
 
-        {filteredRooms.map((room) => (
-          <div
-            key={room._id}
-            className="flex flex-col md:flex-row items-start py-10 gap-6 border-b border-gray-300 last:pb-30 last:border-0"
-          >
+        {filteredRooms.length === 0 ? (
+  <NoRooms />
+) : (
+        filteredRooms.map((room) => (
+    <div
+      key={room._id}
+      className="flex flex-col md:flex-row items-start py-10 gap-6 border-b border-gray-300 last:pb-30 last:border-0"
+    >
             {/* Room Image */}
             <img
               onClick={() => {
@@ -171,7 +175,7 @@ const handleSortOptionChange = (label) => {
               </p>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       {/* Filters */}

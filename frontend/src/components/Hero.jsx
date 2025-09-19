@@ -60,10 +60,10 @@ const Hero = () => {
   return (
     <div className='flex flex-col items-start justify-center px-6 md:px-16 lg:px-24 xl:px-32 text-white bg-[url("/src/assets/heroImage.png")] bg-no-repeat bg-cover bg-center h-screen'>
       <p className="bg-primary/50 px-3.5 py-1 rounded-full mt-20">
-        Diviertete a lo grande
+      belongs anywhere
       </p>
       <h1 className="font-playfair text-2xl md:text-6xl md:leading-[56px] font-bold md:font-extrabold max-w-xl mt-4">
-        Comodidad como en casa
+        Comfort like at home
       </h1>
       <p>
         Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint neque
