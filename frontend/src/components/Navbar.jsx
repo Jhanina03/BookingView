@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { assets } from "../assets/assets";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useClerk, UserButton, useUser, } from "@clerk/clerk-react";
@@ -28,6 +28,9 @@ const Navbar = () => {
     const navigate = useNavigate()
     const location = useLocation()
 
+    //BackEnd
+    // const {} = useContext()
+
     useEffect(() => {
 
         if (location.pathname !== '/') {
@@ -52,7 +55,7 @@ const Navbar = () => {
             {/* Logo */}
             <Link to='/'>
                 <div className="flex gap-2 items-center">
-                    <img src={assets.logo} alt="logo" className={`h-9 ${!isScrolled && "opacity-80"}`} />
+                    <img src={assets.logo} alt="logo" className={`h-9 ${isScrolled && "invert opacity-80"}`} />
                     {/* <h2 className={`text-2xl font-bold text-white ${isScrolled && "invert opacity-80"}`} >Booking View</h2> */}
                 </div>
 
