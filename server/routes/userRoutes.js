@@ -1,8 +1,13 @@
-import express from 'express';
-import userAuth from '../middlewares/userAuth.js';
-import { getUserData } from '../controllers/userController.js';
+import express from "express";
+import { protect } from "../middlewares/authMiddleware.js";
+import {
+  getUserData,
+  storeRecentSearchedCities,
+} from "../controllers/userController.js";
+
 const userRouter = express.Router();
 
-userRouter.get('/data',userAuth,getUserData);
+userRouter.get("/", protect, getUserData);
+userRouter.post("/store-recent-search", protect, storeRecentSearchedCities);
 
 export default userRouter;

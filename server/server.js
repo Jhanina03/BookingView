@@ -3,16 +3,20 @@ import cors from "cors";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/mongodb.js";
-import authRouter from "./routes/authRoutes.js";
 import userRouter from "./routes/userRoutes.js";
+import hotelRouter from "./routes/hotelRoutes.js";
+import roomRouter from "./routes/roomRoutes.js";
+import { clerkMiddleware } from "@clerk/express";
+import clerkWebhooks from "./controllers/clerkWebhooks.js";
+import connectCloudinary from "./config/cloudinary.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 connectDB();
+connectCloudinary();
 
 const allowedOrigins = ["http://localhost:5173"];
 
-app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
@@ -21,10 +25,18 @@ app.use(
   })
 );
 
+//Middleware
+app.use(express.json());
+app.use(clerkMiddleware());
+
+// API to listen to Clerk Webhooks
+app.use("/api/clerk", clerkWebhooks);
+
 app.get("/", (req, res) => {
   res.send("API working");
 });
-app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/hotel", hotelRouter);
+app.use("/api/rooms", roomRouter);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
