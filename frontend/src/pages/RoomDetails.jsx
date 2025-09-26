@@ -3,36 +3,39 @@ import { useParams } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { useAppContext } from "../context/appContext";
 
 import {
   assets,
   facilityIcons,
   roomCommonData,
-  roomsDummyData,
 } from "../assets/assets";
+import toast from "react-hot-toast";
 
 const RoomDetails = () => {
   const { id } = useParams();
+  const { rooms, getToken, axios, navigate } = useAppContext();
   const [room, setRoom] = useState(null);
   const [mainImage, setMainImage] = useState(null);
+  const [guests, setGuests] = useState(1);
+  const [isAvailable, setIsAvailable] = useState(false);
 
   // Date range state
   const [dateRange, setDateRange] = useState([
-    {
-      startDate: null,
-      endDate: null,
-      key: "selection",
-    },
+    { startDate: null, endDate: null, key: "selection" },
   ]);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [error, setError] = useState(""); // ⚡ Para validar
+  const [error, setError] = useState("");
   const calendarRef = useRef();
 
+  // Cargar habitación
   useEffect(() => {
-    const room = roomsDummyData.find((room) => room._id === id);
-    room && setRoom(room);
-    room && setMainImage(room.images[0]);
-  }, [id]);
+    const room = rooms.find((r) => r._id === id);
+    if (room) {
+      setRoom(room);
+      setMainImage(room.images[0]);
+    }
+  }, [rooms]);
 
   // Cerrar calendario si hace click fuera
   useEffect(() => {
@@ -49,7 +52,7 @@ const RoomDetails = () => {
     };
   }, [showCalendar]);
 
-  // Calcular diferencia de días
+  // Diferencia de días
   const getDayDifference = () => {
     const { startDate, endDate } = dateRange[0];
     if (!startDate || !endDate) return 0;
@@ -57,20 +60,94 @@ const RoomDetails = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // Validación al enviar
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const days = getDayDifference();
+  // Check availability
+  const checkAvailability = async () => {
+    try {
+      setError("");
+      const days = getDayDifference();
+      if (days < 2) {
+        setError("⚠️ La estancia mínima es de 2 noches (3 días).");
+        return;
+      }
 
-    if (days < 2) {
-      setError("⚠️ La estancia mínima es de 2 noches (3 días).");
+      if (!dateRange[0].startDate || !dateRange[0].endDate) {
+        setError("Selecciona fechas válidas primero");
+        return;
+      }
+
+      const { data } = await axios.post("/api/bookings/check-availability", {
+        room: id,
+        dateRange,
+      });
+
+      if (data.success) {
+          if (data.isAvailable) {
+              setIsAvailable(true);
+              toast.success("Room is available");
+          } else {
+              setIsAvailable(false);
+              toast.error("Room is not available");
+          }
+    // Solo mostrar si hay mensaje
+    if (data.message) toast(data.message);
+}
+
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    }
+  };
+
+const onSubmitHandler = async (e) => {
+  e.preventDefault();
+
+  setError("");
+
+  // Validar que haya fechas seleccionadas
+  if (!dateRange[0].startDate || !dateRange[0].endDate) {
+    setError("Select dates first");
+    return;
+  }
+
+  const days = getDayDifference();
+  if (days < 2) {
+    setError("⚠️ The minimum stay is 2 nights (3 days).");
+    return;
+  }
+
+  try {
+    if (!isAvailable) {
+      // Solo check availability
+      await checkAvailability();
       return;
     }
 
-    //setError("")
-    //alert(`Reserva confirmada para ${days} noches ✅`)
-    // enviar al backend
-  };
+    // Si ya está disponible, crear reserva
+    const { data } = await axios.post(
+      "/api/bookings/book",
+      {
+        room: id,
+        dateRange,
+        guests,
+        paymentMethod: "Pay At Hotel",
+      },
+      {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      }
+    );
+
+    if (data.success) {
+      toast.success("Booking created successfully");
+      navigate("/my-bookings");
+      scrollTo(0, 0);
+      setIsAvailable(false); // Reset disponibilidad
+    } else {
+      toast.error(data.message);
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || err.message);
+  }
+};
+
 
   return (
     room && (
@@ -102,24 +179,23 @@ const RoomDetails = () => {
             />
           </div>
           <div className="grid grid-cols-2 gap-4 lg:w-1/2 w-full">
-            {room?.images.length > 1 &&
-              room.images.map((image, index) => (
-                <img
-                  onClick={() => setMainImage(image)}
-                  key={index}
-                  src={image}
-                  alt="Room Image"
-                  className={`w-full rounded-xl shadow-md object-cover cursor-pointer ${
-                    mainImage === image && "outline-3 outline-orange-500"
-                  }`}
-                />
-              ))}
+            {room.images.map((image, index) => (
+              <img
+                onClick={() => setMainImage(image)}
+                key={index}
+                src={image}
+                alt="Room Image"
+                className={`w-full rounded-xl shadow-md object-cover cursor-pointer ${
+                  mainImage === image && "outline-3 outline-orange-500"
+                }`}
+              />
+            ))}
           </div>
         </div>
 
         {/* Room Highlights */}
         <div className="flex flex-col md:flex-row md:justify-between mt-10">
-          <div className="felx flex-col">
+          <div className="flex flex-col">
             <h1 className="text-3xl md:text-4xl font-playfair">
               Experience Luxury Like Never Before
             </h1>
@@ -129,23 +205,18 @@ const RoomDetails = () => {
                   key={index}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100"
                 >
-                  <img
-                    src={facilityIcons[item]}
-                    alt={item}
-                    className="w-5 h-5"
-                  />
+                  <img src={facilityIcons[item]} alt={item} className="w-5 h-5" />
                   <p className="text-xs">{item}</p>
                 </div>
               ))}
             </div>
           </div>
-          {/* Room Price */}
           <p className="text-2xl font-medium">${room.pricePerNight}/night</p>
         </div>
 
         {/* CheckIn CheckOut Form */}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={onSubmitHandler}
           className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.15)] p-6 rounded-xl mx-auto mt-16 max-w-4xl"
         >
           <div className="flex flex-col flex-wrap md:flex-row items-start md:items-center gap-4 md:gap-10 text-gray-500">
@@ -153,6 +224,7 @@ const RoomDetails = () => {
             <div className="relative flex flex-col">
               <label className="font-medium">Dates</label>
               <input
+                disabled={isAvailable}
                 type="text"
                 readOnly
                 value={
@@ -170,12 +242,14 @@ const RoomDetails = () => {
                 >
                   <DateRange
                     editableDateInputs={true}
-                    onChange={(item) => setDateRange([item.selection])}
+                    onChange={(item) => {
+                      setDateRange([item.selection]);
+                      setIsAvailable(false);
+                    }}
                     moveRangeOnFirstSelection={false}
                     ranges={dateRange}
                     showDateDisplay={false}
-                    minDate={new Date("2022-12-31")}
-                    maxDate={new Date("2026-12-31")}
+                    minDate={new Date()} // 🔹 no permitir fechas pasadas
                   />
                 </div>
               )}
@@ -187,6 +261,8 @@ const RoomDetails = () => {
                 Guests
               </label>
               <input
+                onChange={(e) => setGuests(Number(e.target.value))}
+                value={guests}
                 type="number"
                 min={1}
                 max={4}
@@ -200,55 +276,13 @@ const RoomDetails = () => {
 
           <button
             type="submit"
-            className="bg-primary hover:bg-primary/90
-          hover:animate-scale active:scale-95 transition-all text-white rounded-md max-md:w-full max-md:mt-6 md:px-25 py-3 md:py-4 text-base cursor-pointer"
+            className="bg-primary hover:bg-primary/90 hover:animate-scale active:scale-95 transition-all text-white rounded-md max-md:w-full max-md:mt-6 md:px-25 py-3 md:py-4 text-base cursor-pointer"
           >
-            Book Now
+            {isAvailable ? "Book Now" : "Check Availability"}
           </button>
         </form>
 
-        {/* Mensaje de error */}
         {error && <p className="text-red-500 mt-3">{error}</p>}
-
-        {/* Common Specifications */}
-        <div className="mt-25 space-y-4">
-          {roomCommonData.map((spec, index) => (
-            <div key={index} className="flex items-start gap-2">
-              <img
-                src={spec.icon}
-                alt={`${spec.title}-icon`}
-                className="w-6.5"
-              />
-              <div>
-                <p className="text-base">{spec.title}</p>
-                <p className="text-gray-500">{spec.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="max-w-3xl border-y border-gray-300 my-15 py-10 text-gray-500">
-          <p>
-            Room description... Lorem ipsum dolor sit amet, consectetur
-            adipisicing elit. Architecto, in alias molestiae impedit aliquam vel
-            doloribus, esse culpa dolorem totam, doloremque dolor cumque?
-            Eveniet saepe iste, ducimus asperiores vitae quisquam.
-          </p>
-        </div>
-
-        {/* Hosted By */}
-        <div className="flex flex-col items-start gap-4">
-          <div className="flex gap-4">
-            <img
-              src={room.hotel.owner.image}
-              alt="Host"
-              className="h-14 w-14 md:h-18 md:w-18 rounded-full"
-            />
-            <div>
-              <p className="text-lg md:text-xl">Hosted By {room.hotel.name}</p>
-            </div>
-          </div>
-        </div>
       </div>
     )
   );

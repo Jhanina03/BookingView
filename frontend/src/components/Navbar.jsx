@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useState } from "react";
 import { assets } from "../assets/assets";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useClerk, UserButton, useUser, } from "@clerk/clerk-react";
+import { Link, useLocation } from "react-router-dom";
+import { useClerk, UserButton, } from "@clerk/clerk-react";
+import { useAppContext } from "../context/appContext";
 
 
 const BookIcon = () => (
@@ -24,10 +25,11 @@ const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const { openSignIn } = useClerk()
-    const { user } = useUser()
-    const navigate = useNavigate()
+    // const { user } = useUser()
+    // const navigate = useNavigate()
     const location = useLocation()
 
+    const{user, navigate, isOwner, setShowHotelReg}=useAppContext()
     //BackEnd
     // const {} = useContext()
 
@@ -69,9 +71,11 @@ const Navbar = () => {
                         <div className={`${isScrolled ? "bg-gray-700" : "bg-white"} h-0.5 w-0 group-hover:w-full transition-all duration-300`} />
                     </a>
                 ))}
-                <button className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer ${isScrolled ? 'text-black' : 'text-white'} transition-all`} onClick={() => navigate('/owner')}>
-                    Dasboard
+              { user && (
+                <button className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer ${isScrolled ? 'text-black' : 'text-white'} transition-all`} onClick={() => isOwner ? navigate('/owner'): setShowHotelReg(true)}>
+                   {isOwner ? 'Dasboard' : 'List Your Hotel'}
                 </button>
+            )}
             </div>
 
             {/* Desktop Right */}

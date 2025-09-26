@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.46.2",
+    "@clerk/nextjs": "^6.32.2",
     "@midudev/tailwind-animations": "^0.2.0",
     "@tailwindcss/vite": "^4.1.13",
     "axios": "^1.12.2",

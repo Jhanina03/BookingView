@@ -1,18 +1,18 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react"; 
 import { assets, cities } from "../assets/assets";
-import { useNavigate } from "react-router-dom";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { useAppContext } from "../context/appContext";
 
 const Hero = () => {
+  const { navigate, getToken, axios, setSearchedCities } = useAppContext();
+
   const [form, setForm] = useState({
     destination: "",
     guests: 1,
   });
-  const navigate = useNavigate();
 
-  // Date range state
   const [dateRange, setDateRange] = useState([
     {
       startDate: null,
@@ -23,13 +23,12 @@ const Hero = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef();
 
-  // Cierra el calendario si el usuario hace click fuera
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (event) => {
       if (calendarRef.current && !calendarRef.current.contains(event.target)) {
         setShowCalendar(false);
       }
-    }
+    };
     if (showCalendar) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -38,29 +37,46 @@ const Hero = () => {
     };
   }, [showCalendar]);
 
-  // Handle form changes
   const handleChange = (e) => {
     setForm({ ...form, [e.target.id]: e.target.value });
   };
 
-  // Handle submit
-  const handleSubmit = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
+
+    const { destination, guests } = form;
     const checkIn = dateRange[0].startDate
       ? dateRange[0].startDate.toISOString().split("T")[0]
       : "";
     const checkOut = dateRange[0].endDate
       ? dateRange[0].endDate.toISOString().split("T")[0]
       : "";
+
     navigate(
-      `/rooms?destination=${form.destination}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${form.guests}`
+      `/rooms?destination=${destination}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
     );
+
+    try {
+      await axios.post(
+        "/api/user/store-recent-search",
+        { recentSearchedCity: destination },
+        { headers: { Authorization: `Bearer ${await getToken()}` } }
+      );
+    } catch (error) {
+      console.error("Error guardando ciudad reciente:", error);
+    }
+
+    setSearchedCities((prev) => {
+      const updated = [...prev, destination];
+      if (updated.length > 3) updated.shift();
+      return updated;
+    });
   };
 
   return (
     <div className='flex flex-col items-start justify-center px-6 md:px-16 lg:px-24 xl:px-32 text-white bg-[url("/src/assets/heroImage.png")] bg-no-repeat bg-cover bg-center h-screen'>
       <p className="bg-primary/50 px-3.5 py-1 rounded-full mt-20">
-      belongs anywhere
+        belongs anywhere
       </p>
       <h1 className="font-playfair text-2xl md:text-6xl md:leading-[56px] font-bold md:font-extrabold max-w-xl mt-4">
         Comfort like at home
@@ -71,9 +87,10 @@ const Hero = () => {
         officiis harum sit quisquam, quibusdam provident dolore, laborum nihil
         quod quidem.
       </p>
+
       <form
         className="bg-white text-gray-500 rounded-lg px-6 py-4 flex flex-col md:flex-row max-md:items-start gap-4 max-md:mx-auto mt-8"
-        onSubmit={handleSubmit}
+        onSubmit={handleSearch}
       >
         <div>
           <div className="flex items-center gap-2">
@@ -84,8 +101,8 @@ const Hero = () => {
             list="destinations"
             id="destination"
             type="text"
-            className="rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
             placeholder="Type here"
+            className="rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
             required
             value={form.destination}
             onChange={handleChange}
@@ -124,8 +141,8 @@ const Hero = () => {
                 moveRangeOnFirstSelection={false}
                 ranges={dateRange}
                 showDateDisplay={false}
-                minDate={new Date('2022-12-31')} // Solo fechas desde hoy
-                maxDate={new Date('2026-12-31')} // Solo hasta el 2026
+                minDate={new Date()}
+                maxDate={new Date("2026-12-31")}
               />
             </div>
           )}
@@ -134,16 +151,17 @@ const Hero = () => {
         <div className="flex md:flex-col max-md:gap-2 max-md:items-center">
           <label htmlFor="guests">Guests</label>
           <input
+            type="number"
+            id="guests"
             min={1}
             max={4}
-            id="guests"
-            type="number"
-            className="rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none  max-w-16"
             placeholder="0"
+            className="rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none max-w-16"
             value={form.guests}
             onChange={handleChange}
           />
         </div>
+
         <button
           type="submit"
           className="flex items-center justify-center gap-1 rounded-md bg-black py-3 px-4 text-white my-auto cursor-pointer max-md:w-full max-md:py-1"

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const hotelSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -10,6 +11,6 @@ const hotelSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Hotel = mongoose.model("Hotel", hotelSchema);
+const Hotel = mongoose.models.Hotel || mongoose.model("Hotel", hotelSchema);
 
 export default Hotel;
