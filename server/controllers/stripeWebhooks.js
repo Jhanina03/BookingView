@@ -1,39 +1,43 @@
-  import stripe from "stripe";
+import stripe from "stripe";
 import Booking from "../models/Booking.js";
 
-  // API to handle Stripe Webhooks
+// API to handle Stripe Webhooks
+export const stripeWebhooks = async (request, response) => {
+  const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-  export const stripeWebhooks = async (request, response) => {
-    // Stripe Gateway Initialize
-   const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-   const sig = request.headers['stripe-signature'];
+  const sig = request.headers["stripe-signature"];
 
   let event;
 
   try {
-    event = stripeInstance.webhooks.constructEvent(request.body, sig, process.
-       env.STRIPE_WEBHOOK_SECRET)
+    // Stripe requiere el raw body para verificar la firma
+    event = stripeInstance.webhooks.constructEvent(
+      request.body, 
+      sig, 
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   } catch (error) {
-    response.status(400).send(`Webhook Error: ${error.message}`);
+    console.error("⚠️ Webhook signature verification failed:", error.message);
+    return response.status(400).send(`Webhook Error: ${error.message}`);
+  }
 
- }
- // Handle the event
-if (event.type === "payment_intent.succeeded") {
-  const paymentIntent = event.data.object;
-  const paymentIntentId = paymentIntent.id;
+  // Manejar solo eventos de checkout completados
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const bookingId = session.metadata.bookingId;
 
-  // Getting Session Metadata
-  const session = await stripeInstance.checkout.sessions.list({
-    payment_intent: paymentIntentId,
-  });
-
-  const { bookingId } = session.data[0].metadata;
-// Mark Payment as Paid
-    await Booking.findByIdAndUpdate(bookingId, {isPaid: true, paymentMethod: "Stripe"})
-    } else {
-    console.log("Unhandled event type :", event.type)
+    try {
+      await Booking.findByIdAndUpdate(bookingId, {
+        isPaid: true,
+        paymentMethod: "Stripe",
+      });
+      console.log(`✅ Booking ${bookingId} marked as paid.`);
+    } catch (error) {
+      console.error("Error updating booking:", error);
     }
-    response.json({ received: true })
+  } else {
+    console.log("Unhandled event type:", event.type);
+  }
 
-
-}
+  response.json({ received: true });
+};
