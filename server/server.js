@@ -14,14 +14,20 @@ import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 connectDB();
 connectCloudinary();
 
 const allowedOrigins = ["http://localhost:5173"];
 
-//Api to listen to Stripe Webhooks
-app.post('/api/stripe',express.raw({type: "application/json"}),stripeWebhooks)
+// Stripe Webhook (usa raw body)
+app.post(
+  '/api/stripe',
+  express.raw({ type: "application/json" }),
+  stripeWebhooks
+);
 
+// Middleware global para rutas normales
 app.use(cookieParser());
 app.use(
   cors({
@@ -29,21 +35,17 @@ app.use(
     credentials: true,
   })
 );
-
-//Middleware
 app.use(express.json());
 app.use(clerkMiddleware());
 
-// API to listen to Clerk Webhooks
+// Clerk Webhooks
 app.use("/api/clerk", clerkWebhooks);
 
-app.get("/", (req, res) => {
-  res.send("API working");
-});
+// Rutas normales
+app.get("/", (req, res) => res.send("API working"));
 app.use("/api/user", userRouter);
 app.use("/api/hotels", hotelRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
-
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
