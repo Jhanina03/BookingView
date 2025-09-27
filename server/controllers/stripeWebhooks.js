@@ -1,19 +1,17 @@
 import stripe from "stripe";
 import Booking from "../models/Booking.js";
 
-// API to handle Stripe Webhooks
+// Webhook de Stripe
 export const stripeWebhooks = async (request, response) => {
   const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-
   const sig = request.headers["stripe-signature"];
-
   let event;
 
   try {
-    // Stripe requiere el raw body para verificar la firma
+    // Stripe requiere el body crudo para verificar la firma
     event = stripeInstance.webhooks.constructEvent(
-      request.body, 
-      sig, 
+      request.body,
+      sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (error) {
