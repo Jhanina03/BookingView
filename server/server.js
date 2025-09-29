@@ -41,7 +41,7 @@ app.get("/", (req, res) => {
   res.send("API working");
 });
 app.use("/api/user", userRouter);
-app.use("/api/hotels", hotelRouter);
+app.use("/api/hotel", hotelRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 
