@@ -171,7 +171,30 @@ export const stripePayment = async (req, res) => {
         bookingId,
       }
     })
-    res.json({success:true, url:session.url})
+    const hotelOwner = await User.findById(roomData.hotel.owner);
+    if (hotelOwner && hotelOwner.email) {
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: hotelOwner.email,
+        subject: "New Booking Confirmed - Payment Received",
+        html: `
+          <h2>Your room has been paid</h2>
+          <p>Dear ${hotelOwner.username},</p>
+          <p>A payment has been confirmed for a reservation at your hotel <strong>${roomData.hotel.name}</strong>.</p>
+          <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Room:</strong> ${roomData.name}</li>
+            <li><strong>Check-in:</strong> ${booking.checkInDate.toDateString()}</li>
+            <li><strong>Check-out:</strong> ${booking.checkOutDate.toDateString()}</li>
+            <li><strong>Amount Paid:</strong> $${booking.totalPrice}</li>
+          </ul>
+          <p>Please check your dashboard for more details.</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+    res.json({ success: true, url: session.url });
   } catch (error) {
    res.json({success:false, message : "Payment Failed"})
   }
