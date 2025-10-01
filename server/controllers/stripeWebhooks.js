@@ -23,57 +23,52 @@ export const stripeWebhooks = async (request, response) => {
   }
 
   // Handle the event
-  if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object;
-    const paymentIntentId = paymentIntent.id;
+if (event.type === "checkout.session.completed") {
+  const session = event.data.object;
 
-    // Getting Session Metadata
-    const session = await stripeInstance.checkout.sessions.list({
-      payment_intent: paymentIntentId,
-    });
+  const { bookingId } = session.metadata;
 
-    const { bookingId } = session.data[0].metadata;
+  // ✅ Mark as paid
+  const booking = await Booking.findByIdAndUpdate(
+    bookingId,
+    { isPaid: true, paymentMethod: "Stripe" },
+    { new: true }
+  );
 
-    // ✅ Mark Payment as Paid
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      { isPaid: true, paymentMethod: "Stripe" },
-      { new: true }
-    );
+  // ✅ Send email to hotel owner
+  if (booking) {
+    const roomData = await Room.findById(booking.room).populate("hotel");
+    const hotelOwner = await User.findById(roomData.hotel.owner);
 
-    // ✅ Send email to hotel owner
-    if (booking) {
-      const roomData = await Room.findById(booking.room).populate("hotel");
-      const hotelOwner = await User.findById(roomData.hotel.owner);
+    if (hotelOwner?.email) {
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: hotelOwner.email,
+        subject: "New Booking Confirmed - Payment Received",
+        html: `
+          <h2>Your room has been booked and paid</h2>
+          <p>Hello ${hotelOwner.username},</p>
+          <p>A payment has been confirmed for your hotel <strong>${roomData.hotel.name}</strong>.</p>
+          <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Room:</strong> ${roomData.name}</li>
+            <li><strong>Check-in:</strong> ${booking.checkInDate.toDateString()}</li>
+            <li><strong>Check-out:</strong> ${booking.checkOutDate.toDateString()}</li>
+            <li><strong>Amount Paid:</strong> $${booking.totalPrice}</li>
+          </ul>
+        `,
+      };
 
-      if (hotelOwner?.email) {
-        const mailOptions = {
-          from: process.env.SENDER_EMAIL,
-          to: hotelOwner.email,
-          subject: "New Booking Confirmed - Payment Received",
-          html: `
-            <h2>Your room has been booked and paid</h2>
-            <p>Hello ${hotelOwner.username},</p>
-            <p>A payment has been confirmed for your hotel <strong>${roomData.hotel.name}</strong>.</p>
-            <ul>
-              <li><strong>Booking ID:</strong> ${booking._id}</li>
-              <li><strong>Room:</strong> ${roomData.name}</li>
-              <li><strong>Check-in:</strong> ${booking.checkInDate.toDateString()}</li>
-              <li><strong>Check-out:</strong> ${booking.checkOutDate.toDateString()}</li>
-              <li><strong>Amount Paid:</strong> $${booking.totalPrice}</li>
-            </ul>
-          `,
-        };
-
-        try {
-          await transporter.sendMail(mailOptions);
-          console.log("📩 Email sent to hotel owner:", hotelOwner.email);
-        } catch (err) {
-          console.error("❌ Error sending email:", err.message);
-        }
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log("📩 Email sent to hotel owner:", hotelOwner.email);
+      } catch (err) {
+        console.error("❌ Error sending email:", err.message);
       }
     }
-  } else {
+  }
+}
+ else {
     console.log("Unhandled event type:", event.type);
   }
 
