@@ -4,46 +4,55 @@ import Room from "../models/Room.js";
 import User from "../models/User.js";
 import transporter from "../config/nodemailer.js";
 
-export const stripeWebhooks = async (req, res) => {
+// API to handle Stripe Webhooks
+export const stripeWebhooks = async (request, response) => {
+  // Stripe Gateway Initialize
   const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-  const sig = req.headers["stripe-signature"];
+  const sig = request.headers["stripe-signature"];
 
   let event;
+
   try {
     event = stripeInstance.webhooks.constructEvent(
-      req.body,
+      request.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (error) {
-    return res.status(400).send(`Webhook Error: ${error.message}`);
+    return response.status(400).send(`Webhook Error: ${error.message}`);
   }
 
-  // ✅ Este es el evento correcto
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const { bookingId } = session.metadata;
+  // Handle the event
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
+    const paymentIntentId = paymentIntent.id;
 
-    // Marcar booking como pagado
+    // Getting Session Metadata
+    const session = await stripeInstance.checkout.sessions.list({
+      payment_intent: paymentIntentId,
+    });
+
+    const { bookingId } = session.data[0].metadata;
+
+    // ✅ Mark Payment as Paid
     const booking = await Booking.findByIdAndUpdate(
       bookingId,
       { isPaid: true, paymentMethod: "Stripe" },
       { new: true }
     );
 
+    // ✅ Send email to hotel owner
     if (booking) {
-      // Obtener datos del cuarto y hotel
       const roomData = await Room.findById(booking.room).populate("hotel");
       const hotelOwner = await User.findById(roomData.hotel.owner);
 
-      // ✅ Enviar correo al dueño del hotel
       if (hotelOwner?.email) {
         const mailOptions = {
           from: process.env.SENDER_EMAIL,
           to: hotelOwner.email,
           subject: "New Booking Confirmed - Payment Received",
           html: `
-            <h2>New Booking Paid</h2>
+            <h2>Your room has been booked and paid</h2>
             <p>Hello ${hotelOwner.username},</p>
             <p>A payment has been confirmed for your hotel <strong>${roomData.hotel.name}</strong>.</p>
             <ul>
@@ -55,12 +64,18 @@ export const stripeWebhooks = async (req, res) => {
             </ul>
           `,
         };
-        await transporter.sendMail(mailOptions);
+
+        try {
+          await transporter.sendMail(mailOptions);
+          console.log("📩 Email sent to hotel owner:", hotelOwner.email);
+        } catch (err) {
+          console.error("❌ Error sending email:", err.message);
+        }
       }
     }
   } else {
     console.log("Unhandled event type:", event.type);
   }
 
-  res.json({ received: true });
+  response.json({ received: true });
 };
