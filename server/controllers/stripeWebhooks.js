@@ -47,6 +47,7 @@ export const stripeWebhooks = async (req, res) => {
 
     if (booking) {
       const roomData = await Room.findById(booking.room).populate("hotel");
+      const roomId = roomData?._id || "N/A";
       const hotelOwner = await User.findById(roomData.hotel.owner);
 
       if (hotelOwner?.email) {
@@ -63,7 +64,7 @@ export const stripeWebhooks = async (req, res) => {
               <p>A payment has been confirmed for your hotel <strong>${roomData.hotel.name}</strong>.</p>
               <ul>
                 <li><strong>Booking ID:</strong> ${booking._id}</li>
-                <li><strong>Room:</strong> ${roomData.name}</li>
+                <li><strong>Room:</strong> ${roomId}</li>
                 <li><strong>Check-in:</strong> ${booking.checkInDate.toDateString()}</li>
                 <li><strong>Check-out:</strong> ${booking.checkOutDate.toDateString()}</li>
                 <li><strong>Amount Paid:</strong> $${booking.totalPrice}</li>
