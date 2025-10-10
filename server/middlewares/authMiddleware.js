@@ -1,9 +1,13 @@
 import User from "../models/User.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
-export const protect = async (req, res, next) => {
+/**
+ * Middleware de protección de rutas.
+ * @param {boolean} allowInactive - si true permite pasar usuarios inactivos (solo para reactivación)
+ */
+export const protect = (allowInactive = false) => async (req, res, next) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = req.auth(); // Clerk añade userId en req.auth()
     if (!userId) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
     }
@@ -11,9 +15,10 @@ export const protect = async (req, res, next) => {
     let user = await User.findById(userId);
 
     if (!user) {
+      // Traer datos de Clerk
       const clerkUser = await clerkClient.users.getUser(userId);
 
-      // Verificar si ya existe un email
+      // Revisar si ya existe el email
       const emailExists = await User.findOne({ email: clerkUser.emailAddresses[0]?.emailAddress });
       if (emailExists) {
         user = emailExists;
@@ -30,7 +35,8 @@ export const protect = async (req, res, next) => {
       }
     }
 
-    if (!user.isActive) {
+    // Validar si usuario activo
+    if (!user.isActive && !allowInactive) {
       return res.status(403).json({
         success: false,
         message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",

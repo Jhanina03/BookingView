@@ -12,6 +12,6 @@ const userRouter = express.Router();
 userRouter.get("/", protect, getUserData);
 userRouter.post("/store-recent-search", protect, storeRecentSearchedCities);
 userRouter.post("/sync", forceSyncUsers);
-userRouter.post("/reactivate", protect, reactivateUser);
+userRouter.post("/reactivate", protect(true), reactivateUser);
 
 export default userRouter;
