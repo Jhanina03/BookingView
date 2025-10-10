@@ -1,11 +1,8 @@
 import User from "../models/User.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
-// console.log("CLERK_SECRET_KEY:", process.env.CLERK_SECRET_KEY);
 export const protect = async (req, res, next) => {
   try {
-    console.log(req.auth());
-
     const { userId } = req.auth();
     if (!userId) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
@@ -14,23 +11,32 @@ export const protect = async (req, res, next) => {
     let user = await User.findById(userId);
 
     if (!user) {
-      console.log(`❌ Usuario con id ${userId} no encontrado en DB. Creando...`);
-
+      // Buscar usuario en Clerk
       const clerkUser = await clerkClient.users.getUser(userId);
 
-      user = await User.create({
-        _id: userId,
-        username: clerkUser.username || "User",
-        email: clerkUser.emailAddresses[0]?.emailAddress || `user-${userId}@example.com`,
-        image: clerkUser.profileImageUrl || "",
-        role: "user",
-        recentSearchedCities: [],
-      });
-
-      console.log(`✅ Usuario creado en DB: ${user.email}`);
+      // Si el usuario existe en Clerk pero no en tu DB, lo creas solo si es nuevo
+      if (!clerkUser.deleted) {
+        user = await User.create({
+          _id: userId,
+          username: clerkUser.username || "User",
+          email: clerkUser.emailAddresses[0]?.emailAddress || `user-${userId}@example.com`,
+          image: clerkUser.profileImageUrl || "",
+          role: "user",
+          recentSearchedCities: [],
+          isActive: true,
+        });
+        console.log(`✅ Usuario creado en DB: ${user.email}`);
+      } else {
+        // Si está marcado como eliminado/inactivo en Clerk, no lo crees
+        return res.status(403).json({
+          success: false,
+          message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",
+        });
+      }
     }
-    
-        if (!user.isActive) {
+
+    // Verificar si está inactivo
+    if (!user.isActive) {
       return res.status(403).json({
         success: false,
         message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",
