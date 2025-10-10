@@ -12,15 +12,22 @@ export const protect = async (req, res, next) => {
 
     if (!user) {
       const clerkUser = await clerkClient.users.getUser(userId);
-      user = await User.create({
-        _id: userId,
-        username: clerkUser.username || "User",
-        email: clerkUser.emailAddresses[0]?.emailAddress || `user-${userId}@example.com`,
-        image: clerkUser.profileImageUrl || "",
-        role: "user",
-        recentSearchedCities: [],
-        isActive: true, 
-      });
+
+      // Verificar si ya existe un email
+      const emailExists = await User.findOne({ email: clerkUser.emailAddresses[0]?.emailAddress });
+      if (emailExists) {
+        user = emailExists;
+      } else {
+        user = await User.create({
+          _id: userId,
+          username: clerkUser.username || "User",
+          email: clerkUser.emailAddresses[0]?.emailAddress || `user-${userId}@example.com`,
+          image: clerkUser.profileImageUrl || "",
+          role: "user",
+          recentSearchedCities: [],
+          isActive: true,
+        });
+      }
     }
 
     if (!user.isActive) {
