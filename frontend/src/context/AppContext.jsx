@@ -36,7 +36,6 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-// fetchUser dentro de AppContext.jsx
 const fetchUser = async () => {
   setIsLoading(true);
   try {
@@ -47,7 +46,7 @@ const fetchUser = async () => {
     if (data.success) {
       setIsOwner(data.role === "hotelOwner");
       setSearchedCities(data.recentSearchedCities);
-      setIsInactive(false);
+      setIsInactive(false); // usuario activo
     }
   } catch (error) {
     if (error.response && error.response.status === 403) {
@@ -55,7 +54,7 @@ const fetchUser = async () => {
         error.response.data.message ===
         "Tu cuenta está inactiva. ¿Deseas reactivarla?"
       ) {
-        setIsInactive(true); // Solo setea la bandera
+        setIsInactive(true); // usuario inactivo
       } else {
         toast.error(error.response.data.message);
       }
@@ -65,7 +64,7 @@ const fetchUser = async () => {
       toast.error(error.message);
     }
   } finally {
-    setIsLoading(false);
+    setIsLoading(false); // siempre termina
   }
 };
 

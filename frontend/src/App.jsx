@@ -20,9 +20,11 @@ const App = () => {
 
   const isOwnerPath = useLocation().pathname.includes("owner");
   const {showHotelReg} = useAppContext();
-  const { isLoading, isInactive } = useAppContext();
- if (isLoading) return <Loader />;
-if (isInactive) return <ReactivateAccount />; 
+const { isLoading, isInactive } = useAppContext();
+
+if (isLoading) return <Loader />;
+if (isInactive) return <ReactivateAccount />; // Bloquea app si está inactivo
+
   // const {showHotelReg} = useAppContext();
 
   return (
