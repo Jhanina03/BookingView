@@ -14,34 +14,27 @@ import ListRoom from "./pages/hotelOwner/ListRoom";
 import {Toaster} from "react-hot-toast";
 import { useAppContext } from "./context/appContext";
 import Loader from "./components/Loader";
-import ReactivateAccount from "./pages/ReactivateAccount";
 
 const App = () => {
+
   const isOwnerPath = useLocation().pathname.includes("owner");
-  const { showHotelReg, isLoading, isInactive } = useAppContext();
+  const {showHotelReg} = useAppContext();
+  // const {showHotelReg} = useAppContext();
 
   return (
     <div>
-      <Toaster />
+      <Toaster/>
       {!isOwnerPath && <Navbar />}
       {showHotelReg && <HotelReg />}
+      {/* {false && <HotelReg />} */}
       <div className="min-h-[70vh]">
-        {isLoading && <Loader />} {/* Solo muestra Loader */}
-        
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/rooms" element={<AllRooms />} />
           <Route path="/rooms/:id" element={<RoomDetails />} />
-          <Route path="/my-bookings" element={<MyBookings />} />
-          <Route path="/loader/:nextUrl" element={<Loader />} />
-
-          {/* Reactivate route */}
-          <Route
-            path="/reactivate"
-            element={isInactive ? <ReactivateAccount /> : <Home />}
-          />
-
-          {/* Owner routes */}
+          <Route path="/my-bookings" element={<MyBookings/>}/>
+          <Route path="/loader/:nextUrl" element={<Loader/>}/>
+            <Route path="/reactivate" element={<ReactivateAccount />} />
           <Route path="/owner" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="add-room" element={<AddRoom />} />
@@ -51,8 +44,7 @@ const App = () => {
       </div>
       <Footer />
     </div>
-  );
-};
-
+  )
+}
 
 export default App
