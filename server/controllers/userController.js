@@ -1,4 +1,6 @@
-import userModel from "../models/User.js";
+import User from "../models/User.js";
+import Hotel from "../models/Hotel.js";
+import Room from "../models/Room.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
 export const syncUsers = async () => {
@@ -7,24 +9,19 @@ export const syncUsers = async () => {
   const clerkUsers = await clerkClient.users.getUserList();
   const clerkIds = clerkUsers.map(u => u.id);
 
-  // const deleted = await userModel.deleteMany({ _id: { $nin: clerkIds } });
-  // console.log(`🗑️ Usuarios eliminados por sincronización: ${deleted.deletedCount}`);
-
-    const result = await userModel.updateMany(
+  const result = await User.updateMany(
     { _id: { $nin: clerkIds } },
     { $set: { isActive: false } }
   );
 
   console.log(`Usuarios marcados como inactivos: ${result.modifiedCount}`);
-
-  return result.deletedCount;
+  return result.modifiedCount;
 };
-
 
 export const forceSyncUsers = async (req, res) => {
   try {
-    const deletedCount = await syncUsers();
-    res.json({ success: true, message: "Sincronización completada", deleted: deletedCount });
+    const inactiveCount = await syncUsers();
+    res.json({ success: true, message: "Sincronización completada", inactive: inactiveCount });
   } catch (error) {
     console.error("🔥 Error en sincronización:", error);
     res.status(500).json({ success: false, message: error.message });
@@ -36,13 +33,13 @@ export const reactivateUser = async (req, res) => {
     const user = req.user;
     user.isActive = true;
 
+    // Desactivar habitaciones si quieres reactivar habitaciones también:
     // const hotels = await Hotel.find({ owner: user._id });
     // for (const hotel of hotels) {
     //   await Room.updateMany({ hotel: hotel._id }, { $set: { isAvailable: true } });
     // }
 
     await user.save();
-
     res.json({ success: true, message: "Cuenta reactivada correctamente" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

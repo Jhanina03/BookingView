@@ -32,24 +32,31 @@ export const AppProvider = ({ children }) => {
         }
     }
 
-    const fetchUser = async () => {
-        try {
-            const { data } = await axios.get("/api/user", {
-                headers: { Authorization: `Bearer ${await getToken()}` },
-                });
+const fetchUser = async () => {
+    try {
+        const { data } = await axios.get("/api/user", {
+            headers: { Authorization: `Bearer ${await getToken()}` },
+        });
 
-            if (data.success) {
-                setIsOwner(data.role === "hotelOwner");
-                setSearchedCities(data.recentSearchedCities)
-            }else{
-                setTimeout(() => {
-                    fetchUser()
-                }, 5000)
-            }
-        } catch (error) {
-            toast.error(error.message)
+        if (data.success) {
+            setIsOwner(data.role === "hotelOwner");
+            setSearchedCities(data.recentSearchedCities);
+        } else if (
+            !data.success &&
+            data.message === "Tu cuenta está inactiva. ¿Deseas reactivarla?"
+        ) {
+            navigate("/reactivate"); 
+        } else {
+            setTimeout(() => {
+                fetchUser();
+            }, 5000);
         }
+    } catch (error) {
+        toast.error(error.message);
     }
+};
+
+
 
     useEffect(() => {
         if (user) {

@@ -13,11 +13,10 @@ const clerkWebhooks = async (req, res) => {
       "svix-signature": req.headers["svix-signature"],
     };
 
-    const payload = req.body.toString("utf8"); // importante
+    const payload = req.body.toString("utf8");
     await whook.verify(payload, headers);
 
     const { data, type } = JSON.parse(payload);
-
     console.log("🔔 Webhook recibido:", type, data.id);
 
     switch (type) {
@@ -29,6 +28,7 @@ const clerkWebhooks = async (req, res) => {
           image: data.image_url || "",
           role: "user",
           recentSearchedCities: [],
+          isActive: true, 
         };
         await User.create(userData);
         console.log(`✅ Usuario creado en DB: ${userData.email}`);
@@ -47,8 +47,6 @@ const clerkWebhooks = async (req, res) => {
       }
 
       case "user.deleted": {
-        console.log("🔴 Webhook user.deleted recibido para userId:", data.id);
-
         const updatedUser = await User.findByIdAndUpdate(
           data.id,
           { isActive: false },
@@ -56,29 +54,19 @@ const clerkWebhooks = async (req, res) => {
         );
         console.log("Usuario desactivado:", updatedUser?._id);
 
-        // Hoteles y habitaciones asociados
         const hotels = await Hotel.find({ owner: data.id });
-        console.log("Hoteles encontrados:", hotels.length);
-
         for (const hotel of hotels) {
-          // Desactivar habitaciones
-          const result = await Room.updateMany(
-            { hotel: hotel._id },
-            { $set: { isAvailable: false } }
-          );
-          console.log(`Habitaciones del hotel ${hotel._id} desactivadas:`, result.modifiedCount);
+          await Room.updateMany({ hotel: hotel._id }, { $set: { isAvailable: false } });
         }
-
         break;
       }
-
 
       default:
         console.log(`⚪ Evento no manejado: ${type}`);
         break;
     }
 
-    res.json({ success: true, message: "Webhook Received" });
+    res.json({ success: true, message: "Webhook recibido" });
   } catch (error) {
     console.error("🔥 Error en webhook:", error);
     res.status(400).json({ success: false, message: error.message });

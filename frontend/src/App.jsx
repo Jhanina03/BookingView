@@ -34,6 +34,7 @@ const App = () => {
           <Route path="/rooms/:id" element={<RoomDetails />} />
           <Route path="/my-bookings" element={<MyBookings/>}/>
           <Route path="/loader/:nextUrl" element={<Loader/>}/>
+          <Route path="/reactivate" element={<ReactivateAccount />} />
           <Route path="/owner" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="add-room" element={<AddRoom />} />
