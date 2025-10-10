@@ -41,18 +41,20 @@ const fetchUser = async () => {
         if (data.success) {
             setIsOwner(data.role === "hotelOwner");
             setSearchedCities(data.recentSearchedCities);
-        } else if (
-            !data.success &&
-            data.message === "Tu cuenta está inactiva. ¿Deseas reactivarla?"
-        ) {
-            navigate("/reactivate"); 
-        } else {
-            setTimeout(() => {
-                fetchUser();
-            }, 5000);
         }
     } catch (error) {
-        toast.error(error.message);
+        if (error.response && error.response.status === 403) {
+            if (
+                error.response.data.message ===
+                "Tu cuenta está inactiva. ¿Deseas reactivarla?"
+            ) {
+                navigate("/reactivate");
+            } else {
+                toast.error(error.response.data.message);
+            }
+        } else {
+            toast.error(error.message);
+        }
     }
 };
 
