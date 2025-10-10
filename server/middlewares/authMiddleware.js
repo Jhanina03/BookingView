@@ -1,12 +1,9 @@
 import User from "../models/User.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
-console.log("CLERK_SECRET_KEY:", process.env.CLERK_SECRET_KEY);
+// console.log("CLERK_SECRET_KEY:", process.env.CLERK_SECRET_KEY);
 export const protect = async (req, res, next) => {
   try {
-    console.log("=== Clerk auth data ===");
-    console.log(req.auth());
-
     const { userId } = req.auth();
     if (!userId) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
@@ -15,8 +12,6 @@ export const protect = async (req, res, next) => {
     let user = await User.findById(userId);
 
     if (!user) {
-      console.log(`❌ Usuario con id ${userId} no encontrado en DB. Creando...`);
-
       const clerkUser = await clerkClient.users.getUser(userId);
 
       user = await User.create({
@@ -26,9 +21,17 @@ export const protect = async (req, res, next) => {
         image: clerkUser.profileImageUrl || "",
         role: "user",
         recentSearchedCities: [],
+        isActive: true,
       });
+    }
 
-      console.log(`✅ Usuario creado en DB: ${user.email}`);
+    if (!user.isActive) {
+      // Usuario inactivo -> enviar señal especial
+      return res.status(403).json({
+        success: false,
+        inactive: true,
+        message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",
+      });
     }
 
     req.user = user;

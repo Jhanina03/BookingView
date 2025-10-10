@@ -4,24 +4,32 @@ import Room from "../models/Room.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
 export const syncUsers = async () => {
-  console.log("🔄 Iniciando sincronización de usuarios con Clerk...");
-
+  console.log("🔄 Sincronizando usuarios con Clerk...");
   const clerkUsers = await clerkClient.users.getUserList();
   const clerkIds = clerkUsers.map(u => u.id);
 
-  const result = await User.updateMany(
-    { _id: { $nin: clerkIds } },
-    { $set: { isActive: false } }
-  );
+  const inactiveUsers = await User.find({ _id: { $nin: clerkIds }, isActive: true });
 
-  console.log(`Usuarios marcados como inactivos: ${result.modifiedCount}`);
-  return result.modifiedCount;
+  for (const user of inactiveUsers) {
+    user.isActive = false;
+    await user.save();
+
+    await deactivateUserRooms(user._id);
+  }
+
+  console.log(`Usuarios marcados como inactivos: ${inactiveUsers.length}`);
+  return inactiveUsers.length;
 };
+
 
 export const forceSyncUsers = async (req, res) => {
   try {
     const inactiveCount = await syncUsers();
-    res.json({ success: true, message: "Sincronización completada", inactive: inactiveCount });
+    res.json({
+      success: true,
+      message: "Sincronización completada",
+      inactive: inactiveCount,
+    });
   } catch (error) {
     console.error("🔥 Error en sincronización:", error);
     res.status(500).json({ success: false, message: error.message });
@@ -31,20 +39,20 @@ export const forceSyncUsers = async (req, res) => {
 export const reactivateUser = async (req, res) => {
   try {
     const user = req.user;
+    if (user.isActive) return res.json({ success: true, message: "Tu cuenta ya está activa" });
+
     user.isActive = true;
-
-    // Desactivar habitaciones si quieres reactivar habitaciones también:
-    // const hotels = await Hotel.find({ owner: user._id });
-    // for (const hotel of hotels) {
-    //   await Room.updateMany({ hotel: hotel._id }, { $set: { isAvailable: true } });
-    // }
-
     await user.save();
+
+    await activateUserRooms(user._id);
+
     res.json({ success: true, message: "Cuenta reactivada correctamente" });
   } catch (error) {
+    console.error("🔥 Error reactivando usuario:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 export const getUserData = async (req, res) => {
   try {
@@ -72,5 +80,25 @@ export const storeRecentSearchedCities = async (req, res) => {
     res.json({ success: true, message: "City added" });
   } catch (error) {
     res.json({ success: false, message: error.message });
+  }
+};
+
+export const deactivateUserRooms = async (userId) => {
+  const hotels = await Hotel.find({ owner: userId });
+  for (const hotel of hotels) {
+    await Room.updateMany(
+      { hotel: hotel._id },
+      { $set: { isAvailable: false } }
+    );
+  }
+};
+
+export const activateUserRooms = async (userId) => {
+  const hotels = await Hotel.find({ owner: userId });
+  for (const hotel of hotels) {
+    await Room.updateMany(
+      { hotel: hotel._id },
+      { $set: { isAvailable: true } }
+    );
   }
 };

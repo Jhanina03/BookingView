@@ -31,25 +31,37 @@ export const AppProvider = ({ children }) => {
             toast.error(error.message)
         }
     }
+const fetchUser = async () => {
+  try {
+    const { data } = await axios.get("/api/user", {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
 
-    const fetchUser = async () => {
-        try {
-            const { data } = await axios.get("/api/user", {
-                headers: { Authorization: `Bearer ${await getToken()}` },
-                });
-
-            if (data.success) {
-                setIsOwner(data.role === "hotelOwner");
-                setSearchedCities(data.recentSearchedCities)
-            }else{
-                setTimeout(() => {
-                    fetchUser()
-                }, 5000)
-            }
-        } catch (error) {
-            toast.error(error.message)
-        }
+    if (data.success) {
+      setIsOwner(data.role === "hotelOwner");
+      setSearchedCities(data.recentSearchedCities);
+    } else if (data.inactive) {
+      // Usuario inactivo -> preguntar si desea reactivar
+      const reactivar = window.confirm("Tu cuenta está inactiva. ¿Deseas reactivarla?");
+      if (reactivar) {
+        await axios.post(
+          "/api/user/reactivate",
+          {},
+          { headers: { Authorization: `Bearer ${await getToken()}` } }
+        );
+        toast.success("Cuenta reactivada. Ingresa nuevamente.");
+        window.location.reload(); // refrescar estado
+      } else {
+        toast.error("No puedes ingresar hasta reactivar tu cuenta.");
+      }
+    } else {
+      toast.error(data.message);
     }
+  } catch (error) {
+    toast.error(error.response?.data?.message || error.message);
+  }
+};
+
 
     useEffect(() => {
         if (user) {

@@ -20,29 +20,43 @@ const clerkWebhooks = async (req, res) => {
     console.log("🔔 Webhook recibido:", type, data.id);
 
     switch (type) {
-      case "user.created": {
-        const userData = {
-          _id: data.id,
-          email: data.email_addresses[0]?.email_address || "",
-          username: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
-          image: data.image_url || "",
-          role: "user",
-          recentSearchedCities: [],
-          isActive: true, 
-        };
-        await User.create(userData);
-        console.log(`✅ Usuario creado en DB: ${userData.email}`);
+    case "user.created": {
+        const email = data.email_addresses[0]?.email_address;
+        let user = await User.findOne({ email });
+
+        if (user) {
+            // Usuario ya existe, solo actualizar campos relevantes
+            user._id = data.id; // opcional, si quieres mantener el ID de Clerk
+            user.username = `${data.first_name || ""} ${data.last_name || ""}`.trim();
+            user.image = data.image_url || "";
+            user.isActive = true; // reactiva si estaba inactivo
+            await user.save();
+            console.log(`🟡 Usuario existente actualizado: ${user.email}`);
+        } else {
+            // Crear usuario nuevo
+            const userData = {
+                _id: data.id,
+                email,
+                username: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+                image: data.image_url || "",
+                role: "user",
+                recentSearchedCities: [],
+                isActive: true,
+            };
+            await User.create(userData);
+            console.log(`✅ Usuario creado: ${userData.email}`);
+        }
         break;
-      }
+    }
 
       case "user.updated": {
+        const email = data.email_addresses[0]?.email_address || "";
         const userData = {
-          email: data.email_addresses[0]?.email_address || "",
           username: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
           image: data.image_url || "",
         };
-        const updatedUser = await User.findByIdAndUpdate(data.id, userData, { new: true });
-        console.log(`🟡 Usuario actualizado en DB: ${updatedUser?._id}`);
+        const updatedUser = await User.findOneAndUpdate({ email }, userData, { new: true });
+        console.log(`🟡 Usuario actualizado en DB: ${updatedUser?._id || "No encontrado"}`);
         break;
       }
 
