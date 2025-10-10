@@ -36,40 +36,38 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Fetch user info
-  const fetchUser = async () => {
-    setIsLoading(true);
-    try {
-      const { data } = await axios.get("/api/user", {
-        headers: { Authorization: `Bearer ${await getToken()}` },
-      });
+// fetchUser dentro de AppContext.jsx
+const fetchUser = async () => {
+  setIsLoading(true);
+  try {
+    const { data } = await axios.get("/api/user", {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
 
-      if (data.success) {
-        setIsOwner(data.role === "hotelOwner");
-        setSearchedCities(data.recentSearchedCities);
-        setIsInactive(false);
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 403) {
-        if (
-          error.response.data.message ===
-          "Tu cuenta está inactiva. ¿Deseas reactivarla?"
-        ) {
-          setIsInactive(true);
-          navigate("/reactivate");
-        } else {
-          toast.error(error.response.data.message);
-        }
-      } else if (error.response && error.response.status === 401) {
-        toast.error("No autenticado");
-        // Opcional: navigate("/login");
-      } else {
-        toast.error(error.message);
-      }
-    } finally {
-      setIsLoading(false);
+    if (data.success) {
+      setIsOwner(data.role === "hotelOwner");
+      setSearchedCities(data.recentSearchedCities);
+      setIsInactive(false);
     }
-  };
+  } catch (error) {
+    if (error.response && error.response.status === 403) {
+      if (
+        error.response.data.message ===
+        "Tu cuenta está inactiva. ¿Deseas reactivarla?"
+      ) {
+        setIsInactive(true); // Solo setea la bandera
+      } else {
+        toast.error(error.response.data.message);
+      }
+    } else if (error.response && error.response.status === 401) {
+      toast.error("No autenticado");
+    } else {
+      toast.error(error.message);
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Effects
   useEffect(() => {
