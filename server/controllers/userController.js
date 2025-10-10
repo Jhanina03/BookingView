@@ -7,10 +7,17 @@ export const syncUsers = async () => {
   const clerkUsers = await clerkClient.users.getUserList();
   const clerkIds = clerkUsers.map(u => u.id);
 
-  const deleted = await userModel.deleteMany({ _id: { $nin: clerkIds } });
-  console.log(`🗑️ Usuarios eliminados por sincronización: ${deleted.deletedCount}`);
+  // const deleted = await userModel.deleteMany({ _id: { $nin: clerkIds } });
+  // console.log(`🗑️ Usuarios eliminados por sincronización: ${deleted.deletedCount}`);
 
-  return deleted.deletedCount;
+    const result = await userModel.updateMany(
+    { _id: { $nin: clerkIds } },
+    { $set: { isActive: false } }
+  );
+
+  console.log(`Usuarios marcados como inactivos: ${result.modifiedCount}`);
+
+  return result.deletedCount;
 };
 
 
