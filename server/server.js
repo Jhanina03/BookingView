@@ -11,6 +11,7 @@ import clerkWebhooks from "./controllers/clerkWebhooks.js";
 import connectCloudinary from "./config/cloudinary.js";
 import bookingRouter from "./routes/bookingRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
+import { syncUsers } from "./controllers/userController.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +46,9 @@ app.use("/api/hotel", hotelRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 
+syncUsers()
+  .then(() => console.log("✅ Sincronización inicial completa"))
+  .catch((err) => console.error("🔥 Error al sincronizar usuarios:", err));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   

@@ -29,6 +29,13 @@ export const protect = async (req, res, next) => {
 
       console.log(`✅ Usuario creado en DB: ${user.email}`);
     }
+    
+        if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",
+      });
+    }
 
     req.user = user;
     next();

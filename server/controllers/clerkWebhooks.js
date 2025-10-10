@@ -49,22 +49,29 @@ const clerkWebhooks = async (req, res) => {
       case "user.deleted": {
         console.log("🔴 Webhook user.deleted recibido para userId:", data.id);
 
-        const deletedUser = await User.findOneAndDelete({ _id: data.id });
-        console.log("Usuario eliminado:", deletedUser ? deletedUser._id : "No encontrado");
+        const updatedUser = await User.findByIdAndUpdate(
+          data.id,
+          { isActive: false },
+          { new: true }
+        );
+        console.log("Usuario desactivado:", updatedUser?._id);
 
+        // Hoteles y habitaciones asociados
         const hotels = await Hotel.find({ owner: data.id });
         console.log("Hoteles encontrados:", hotels.length);
 
         for (const hotel of hotels) {
+          // Desactivar habitaciones
           const result = await Room.updateMany(
             { hotel: hotel._id },
             { $set: { isAvailable: false } }
           );
-          console.log(`Habitaciones del hotel ${hotel._id} actualizadas:`, result.modifiedCount);
+          console.log(`Habitaciones del hotel ${hotel._id} desactivadas:`, result.modifiedCount);
         }
 
         break;
       }
+
 
       default:
         console.log(`⚪ Evento no manejado: ${type}`);
