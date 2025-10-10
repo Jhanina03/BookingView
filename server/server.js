@@ -30,12 +30,12 @@ app.use(
   })
 );
 
-//Middleware
-app.use(express.json());
-app.use(clerkMiddleware());
 
 // API to listen to Clerk Webhooks
 app.post("/api/clerk", express.raw({ type: "*/*" }), clerkWebhooks);
+//Middleware
+app.use(express.json());
+app.use(clerkMiddleware());
 
 app.get("/", (req, res) => {
   res.send("API working");
