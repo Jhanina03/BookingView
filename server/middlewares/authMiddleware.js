@@ -1,24 +1,32 @@
 import User from "../models/User.js";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
+// Middleware para proteger rutas
 export const protect = async (req, res, next) => {
   try {
+    // Obtener userId de Clerk
     const { userId } = req.auth();
     if (!userId) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
     }
 
+    // Buscar usuario por _id
     let user = await User.findById(userId);
 
     if (!user) {
-      // Buscar usuario en Clerk
+      // Obtener datos de Clerk
       const clerkUser = await clerkClient.users.getUser(userId);
 
-      // Si el usuario existe en Clerk pero no en tu DB, lo creas solo si es nuevo
-      if (!clerkUser.deleted) {
+      // Buscar si ya existe por email para evitar duplicados
+      const existingUser = await User.findOne({ email: clerkUser.emailAddresses[0]?.emailAddress });
+
+      if (existingUser) {
+        user = existingUser; // Usar usuario existente
+      } else {
+        // Crear usuario solo si no existe
         user = await User.create({
           _id: userId,
-          username: clerkUser.username || "User",
+          username: clerkUser.username || `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "User",
           email: clerkUser.emailAddresses[0]?.emailAddress || `user-${userId}@example.com`,
           image: clerkUser.profileImageUrl || "",
           role: "user",
@@ -26,16 +34,10 @@ export const protect = async (req, res, next) => {
           isActive: true,
         });
         console.log(`✅ Usuario creado en DB: ${user.email}`);
-      } else {
-        // Si está marcado como eliminado/inactivo en Clerk, no lo crees
-        return res.status(403).json({
-          success: false,
-          message: "Tu cuenta está inactiva. ¿Deseas reactivarla?",
-        });
       }
     }
 
-    // Verificar si está inactivo
+    // Bloquear usuarios inactivos
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
