@@ -20,35 +20,29 @@ const clerkWebhooks = async (req, res) => {
     console.log("🔔 Webhook recibido:", type, data.id);
 
     switch (type) {
-    case "user.created": {
-        const email = data.email_addresses[0]?.email_address;
-        let user = await User.findOne({ email });
+      case "user.created": {
+        const existingUser = await User.findOne({ email: data.email_address });
 
-        if (user) {
-            // Usuario ya existe, solo actualizar campos relevantes
-            user._id = data.id; // opcional, si quieres mantener el ID de Clerk
-            user.username = `${data.first_name || ""} ${data.last_name || ""}`.trim();
-            user.image = data.image_url || "";
-            user.isActive = true; // reactiva si estaba inactivo
-            await user.save();
-            console.log(`🟡 Usuario existente actualizado: ${user.email}`);
-        } else {
-            // Crear usuario nuevo
-            const userData = {
-                _id: data.id,
-                email,
-                username: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
-                image: data.image_url || "",
-                role: "user",
-                recentSearchedCities: [],
-                isActive: true,
-            };
-            await User.create(userData);
-            console.log(`✅ Usuario creado: ${userData.email}`);
+        if (existingUser) {
+          if (!existingUser.isActive) {
+            console.log(`⚠️ Usuario ${data.email_address} está inactivo, no se recrea.`);
+            return res.status(200).json({ success: false, message: "Usuario inactivo, no creado" });
+          } else {
+            console.log(`ℹ️ Usuario ${data.email_address} ya existe y está activo.`);
+            return res.status(200).json({ success: true, message: "Usuario ya existente" });
+          }
         }
-        break;
-    }
 
+        await User.create({
+          _id: data.id,
+          username: `${data.first_name || ""} ${data.last_name || ""}`.trim() || "Sin nombre",
+          email: data.email_address,
+          image: data.image_url,
+        });
+
+        console.log(`✅ Usuario ${data.email_address} creado correctamente.`);
+        break;
+      }
       case "user.updated": {
         const email = data.email_addresses[0]?.email_address || "";
         const userData = {
